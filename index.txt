@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AIRISE Virtual Try-On</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#08080A;color:#EDE9E0;font-family:Georgia,serif;min-height:100vh}
+header{background:#0C0C14;border-bottom:1px solid #1A1A28;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30}
+.logo{color:#C9A96E;letter-spacing:.18em;font-size:16px;text-transform:uppercase}
+.logo span{color:#333348;font-size:10px;margin-left:10px}
+.wrap{max-width:480px;margin:0 auto;padding:20px 14px 80px}
+.hero{text-align:center;margin-bottom:22px}
+.hero h1{font-size:22px;font-weight:300;margin-bottom:6px}
+.hero h1 em{color:#C9A96E}
+.hero p{color:#33334A;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.row{display:flex;gap:10px;margin-bottom:14px}
+.zone{flex:1}
+.zone span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A6F3E;display:block;margin-bottom:6px}
+.box{border:2px dashed #222230;border-radius:8px;overflow:hidden;background:#0C0C14;min-height:130px;text-align:center;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center}
+.box.on{min-height:0;border-color:#6ECA9A}
+.box img{width:100%;display:block;max-height:210px;object-fit:cover}
+.ph{padding:20px 8px}
+.ph .ic{font-size:26px;opacity:.2;margin-bottom:8px}
+.ph p{color:#44445A;font-size:12px;line-height:1.5}
+.chg{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.7);border-radius:20px;padding:3px 9px;font-size:10px;color:#C9A96E}
+input[type=file]{display:none}
+.lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A6F3E;margin-bottom:6px;display:block}
+#desc{width:100%;padding:10px 12px;border-radius:6px;border:1px solid #222230;background:#0C0C14;color:#EDE9E0;font-size:12px;font-family:Georgia,serif;margin-bottom:16px;outline:none}
+#btn{width:100%;padding:15px;border-radius:8px;border:none;background:#14141E;color:#2A2A3A;font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;cursor:not-allowed;font-family:Georgia,serif;margin-bottom:12px;transition:all .25s}
+#btn.ready{background:linear-gradient(135deg,#C9A96E,#8A6F3E);color:#08080A;cursor:pointer;box-shadow:0 4px 20px rgba(201,169,110,.18)}
+#btn.loading{background:rgba(201,169,110,.14);color:#C9A96E;cursor:wait}
+.prog{height:2px;background:#1A1A28;border-radius:2px;margin-bottom:16px;overflow:hidden;display:none}
+.progbar{height:100%;background:linear-gradient(90deg,#8A6F3E,#E8C98A,#8A6F3E);background-size:200% 100%;border-radius:2px;animation:sh 1.5s linear infinite}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.err{background:rgba(202,110,110,.07);border:1px solid rgba(202,110,110,.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:none}
+.err strong{color:#CA6E6E;font-size:12px;display:block;margin-bottom:4px}
+.err p{color:#CA6E6E;font-size:11px;line-height:1.7;opacity:.85}
+.res{display:none;margin-bottom:24px}
+.rl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6ECA9A;margin-bottom:10px}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.bal{font-size:9px;text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;color:#333348}
+.bal.af{color:#6ECA9A}
+.bai{width:100%;border-radius:6px;border:1px solid #1A1A28;display:block}
+.bai.af{border-color:rgba(110,202,154,.3)}
+.full{width:100%;border-radius:8px;border:1px solid #1A1A28;display:block;margin-bottom:12px}
+.save{display:block;width:100%;padding:12px;border-radius:6px;border:1px solid rgba(110,202,154,.3);background:rgba(110,202,154,.07);color:#6ECA9A;font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-align:center;text-decoration:none;margin-bottom:10px}
+.retry{width:100%;padding:10px;border-radius:6px;border:1px solid #222230;background:transparent;color:#55556A;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;font-family:Georgia,serif}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">AIRISE <span>Virtual Try-On</span></span>
+  <span style="font-size:10px;color:#6ECA9A;border:1px solid rgba(110,202,154,.3);border-radius:20px;padding:3px 10px">IDM-VTON</span>
+</header>
+<div class="wrap">
+  <div class="hero">
+    <h1>See it on <em>you</em></h1>
+    <p>Upload photo + garment &rarr; AI generates photorealistic try-on</p>
+  </div>
+  <div class="row">
+    <div class="zone">
+      <span>Your Photo</span>
+      <div class="box" id="pb" onclick="document.getElementById('pi').click()">
+        <div class="ph"><div class="ic">&#129464;</div><p>Tap to upload<br/>your photo</p></div>
+      </div>
+      <input type="file" id="pi" accept="image/*" onchange="load('p',this)"/>
+    </div>
+    <div class="zone">
+      <span>Garment Photo</span>
+      <div class="box" id="gb" onclick="document.getElementById('gi').click()">
+        <div class="ph"><div class="ic">&#128248;</div><p>Tap to upload<br/>garment</p></div>
+      </div>
+      <input type="file" id="gi" accept="image/*" onchange="load('g',this)"/>
+    </div>
+  </div>
+  <label class="lbl">Garment Description (helps accuracy)</label>
+  <input type="text" id="desc" placeholder="e.g. purple salwar kameez with gold embroidery"/>
+  <button id="btn" onclick="run()">Upload both photos to start</button>
+  <div class="prog" id="prog"><div class="progbar"></div></div>
+  <div class="err" id="eb"><strong>Error</strong><p id="em"></p></div>
+  <div class="res" id="rb">
+    <div class="rl">&#10022; Try-On Ready</div>
+    <div class="ba">
+      <div><div class="bal">Before</div><img id="bi" class="bai" src="" alt="before"/></div>
+      <div><div class="bal af">After AI</div><img id="ai" class="bai af" src="" alt="after"/></div>
+    </div>
+    <img id="fi" class="full" src="" alt="result"/>
+    <a id="sa" class="save" target="_blank">Open Full Image (save from here)</a>
+    <button class="retry" onclick="reset()">Try Another</button>
+  </div>
+</div>
+<script>
+var SERVER = "https://airise-vton.onrender.com";
+var pd = null, gd = null;
+function load(t, inp) {
+  var f = inp.files[0];
+  if (!f) return;
+  inp.value = "";
+  var r = new FileReader();
+  r.onload = function(e) {
+    var d = e.target.result;
+    if (t === "p") { pd = d; document.getElementById("bi").src = d; setBox("pb", d); }
+    else { gd = d; setBox("gb", d); }
+    upd();
+  };
+  r.readAsDataURL(f);
+}
+function setBox(id, src) {
+  var b = document.getElementById(id);
+  b.className = "box on";
+  b.innerHTML = "<img src=\"" + src + "\"/><span class=\"chg\">Change</span>";
+}
+function upd() {
+  var b = document.getElementById("btn");
+  if (pd && gd) { b.className = "ready"; b.textContent = "Generate AI Try-On"; }
+}
+function run() {
+  if (!pd || !gd) return;
+  var b = document.getElementById("btn");
+  b.className = "loading"; b.textContent = "Sending to AI server...";
+  document.getElementById("prog").style.display = "block";
+  document.getElementById("eb").style.display = "none";
+  document.getElementById("rb").style.display = "none";
+  var desc = document.getElementById("desc").value || "clothing item";
+  fetch(SERVER + "/tryon", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({person: pd, garment: gd, desc: desc})
+  })
+  .then(function(r) {
+    b.textContent = "AI rendering... (30-60 sec)";
+    return r.json();
+  })
+  .then(function(d) {
+    if (d.error) throw new Error(d.error);
+    document.getElementById("ai").src = d.result;
+    document.getElementById("fi").src = d.result;
+    document.getElementById("sa").href = d.result;
+    document.getElementById("rb").style.display = "block";
+    b.className = "ready"; b.textContent = "Generate Again";
+    document.getElementById("prog").style.display = "none";
+  })
+  .catch(function(e) {
+    document.getElementById("em").textContent = e.message;
+    document.getElementById("eb").style.display = "block";
+    b.className = "ready"; b.textContent = "Try Again";
+    document.getElementById("prog").style.display = "none";
+  });
+}
+function reset() {
+  pd = null; gd = null;
+  ["pb","gb"].forEach(function(id, i) {
+    var b = document.getElementById(id);
+    b.className = "box";
+    b.innerHTML = "<div class=\"ph\"><div class=\"ic\">" + (i===0?"&#129464;":"&#128248;") + "</div><p>Tap to upload<br/>" + (i===0?"your photo":"garment") + "</p></div>";
+  });
+  document.getElementById("rb").style.display = "none";
+  document.getElementById("eb").style.display = "none";
+  document.getElementById("desc").value = "";
+  document.getElementById("btn").className = "";
+  document.getElementById("btn").textContent = "Upload both photos to start";
+}
+</script>
+</body>
+</html>
